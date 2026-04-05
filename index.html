@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>古籍史籍收藏查询系统</title>
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+body {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 30px 20px;
+    position: relative;
+    min-height: 100vh;
+}
+/* 你的背景图 + 75% 透明度 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('https://imgloc.com/i/ZQT0c0');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: 0.75;
+    z-index: -1;
+}
+.page-title {
+    text-align: center;
+    font-size: 28px;
+    margin-bottom: 30px;
+    color: #222;
+    text-shadow: 0 2px 4px rgba(255,255,255,0.8);
+}
+.search-box {
+    width: 100%;
+    padding: 16px 20px;
+    font-size: 17px;
+    border: none;
+    border-radius: 12px;
+    margin-bottom: 30px;
+    position: sticky;
+    top: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    z-index: 10;
+}
+.book-container {
+    display: grid;
+    gap: 20px;
+}
+.book-item {
+    background: rgba(255, 255, 255, 0.92);
+    border-radius: 12px;
+    padding: 22px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.book-item:hover {
+    transform: translateY(-3px);
+}
+.book-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #1a1a1a;
+}
+.book-info {
+    font-size: 15px;
+    color: #444;
+    line-height: 1.6;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+.modal-content {
+    background: white;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 30px;
+    border-radius: 16px;
+    position: relative;
+}
+.close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+.detail-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #111;
+}
+.detail-section {
+    margin-bottom: 16px;
+    line-height: 1.8;
+    font-size: 16px;
+}
+.detail-section strong {
+    font-size: 16px;
+    color: #222;
+}
+.empty-tip {
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+    padding: 60px 0;
+}
+</style>
+</head>
+
+<body>
+<h1 class="page-title">古籍史籍收藏查询系统</h1>
+<input class="search-box" id="search" placeholder="搜索书名、作者、版本、藏地..." oninput="search()">
+<div class="book-container" id="list"></div>
+
+<div id="modal" class="modal" onclick="if(event.target===this) closeModal()">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <div id="detail"></div>
+    </div>
+</div>
+
+<script>
+const books = [
+{
+    name: "法显传",
+    detail: "《法显传》一卷",
+    author: "（东晋）释法显撰",
+    version: "宋福州开元禅寺刊本",
+    original: "原金泽文库、德富苏峰成篑堂等旧藏",
+    current: "御茶之水图书馆藏本",
+    full: "empty"
+},
+{
+    name: "大宋僧史略",
+    detail: "《大宋僧史略》三卷",
+    author: "（宋）释赞宁撰",
+    version: "宋绍兴十四年序刊本",
+    original: "原大须观音等旧藏",
+    current: "名古屋真福寺藏本",
+    full: "empty"
+},
+{
+    name: "续高僧传",
+    detail: "《续高僧传》（残本）九卷",
+    author: "（唐）释道宣撰",
+    version: "宋开元寺刊本",
+    original: "原金泽文库等旧藏",
+    current: "尊经阁文库藏本",
+    full: "empty"
+},
+{
+    name: "大慈恩寺三藏法师传",
+    detail: "《大慈恩寺三藏法师传》十卷",
+    author: "（唐）释慧立撰",
+    version: "宋开元寺版大藏经零本",
+    original: "原神田鬯庵（喜一郎）等旧藏",
+    current: "大谷大学附属图书馆藏本",
+    full: "empty"
+},
+{
+    name: "南海寄归内法传",
+    detail: "《南海寄归内法传》（残本）两卷",
+    author: "（唐）释义净撰",
+    version: "福州开元禅寺《大藏经》零本",
+    original: "原德富苏峰成篑堂等旧藏",
+    current: "御茶之水图书馆藏本",
+    full: "empty"
+},
+
+// ======================
+// 景德传灯录 1
+// ======================
+{
+    name: "景德传灯录",
+    detail: "《景德传灯录》三十卷",
+    author: "（宋）释道原辑",
+    version: "元延祐丙辰湖州禅幽庵僧人希渭刊本",
+    original: "原三菱财团岩崎氏家等旧藏",
+    current: "东洋文库藏本",
+    full: `
+<div class="detail-section"><strong>类型：</strong>灯录</div>
+<div class="detail-section"><strong>名称：</strong>《景德传灯录》</div>
+<div class="detail-section"><strong>别称：</strong>《佛祖同参集》</div>
+<div class="detail-section"><strong>作者：</strong>道原</div>
+<div class="detail-section"><strong>成书年代：</strong>景德三年（1006年）</div>
+<div class="detail-section"><strong>传日日期：</strong>熙宁-元丰、淳祐</div>
+<hr style="margin:20px 0;border-top:1px solid #eee">
+<div class="detail-section"><strong>一、史籍基本信息</strong></div>
+<div class="detail-section">《景德传灯录》由北宋苏州承天寺僧人释道原编撰，初名《佛祖同参集》，成书于宋真宗景德年间（1004—1007），为佛教禅宗首部以“灯录”命名的史传著作。道原编成后经杨亿等人勘定，宋真宗敕令编入大藏经流通。</div>
+<div class="detail-section" style="margin-top:16px"><strong>二、作者信息</strong></div>
+<div class="detail-section">道原，北宋法眼宗禅僧，属天台德韶法系。系天台韶国师之嗣，法眼清凉益之孙。</div>
+<div class="detail-section" style="margin-top:16px"><strong>三、成书年代</strong></div>
+<div class="detail-section">景德三年。据王随《传灯玉英集》后序记载，“文明武定章圣元孝皇帝在宥之九载，有江吴僧道源采七佛而下暨历世高贤尊宿言句，编成传灯录三十轴，诣阙进焉。寻诏名臣刊修臻毕，遂成钜典，模印颁行。”</div>
+<div class="detail-section" style="margin-top:16px"><strong>四、传日时间</strong></div>
+<div class="detail-section">无准确时间，据史料为：熙宁-元丰年间、淳祐年间。<br>据《参天台五台山记》记载，日本延历寺阿暗梨成寻于1072年入宋，携归经藏中有《景德传灯录》；1241年圣一国师圆尔辩圆自宋归，亦携归此籍。</div>
+<div class="detail-section" style="margin-top:16px"><strong>五、中日汉文大藏经收录细目（部分）</strong></div>
+<div class="detail-section">【崇宁藏】No.1270《景德传灯录》30卷<br>【毗卢藏】No.1271 宋道原纂<br>【赵城金藏】No.1507 30卷<br>【碛砂藏】No.1292 宋道原纂 30卷<br>【普宁藏】【至元录】【洪武南藏】【永乐南藏】【永乐北藏】【嘉兴藏】【乾隆藏】【缩刻藏】【卍正藏】【大正藏】【中华藏】均有收录。</div>
+<div class="detail-section" style="margin-top:16px"><strong>六、参考文献</strong></div>
+<div class="detail-section">【1】王随《传灯玉英集·残卷》<br>【2】志磐《佛祖统纪》<br>【3】郭声波点校《宋会要辑稿·蕃夷道释》<br>【4】脱脱《宋史》<br>【5】陈垣《中国佛教史籍概论》<br>【6】严绍璗《日藏汉籍善本书录》<br>【7】[日]石井修道《宋代禅籍逸书序跋考》<br>【8】[日]释成寻《参天台五台山记》</div>
+`
+},
+
+// ======================
+// 景德传灯录 2
+// ======================
+{
+    name: "景德传灯录",
+    detail: "《景德传灯录》三十卷",
+    author: "（宋）释道原辑",
+    version: "元至正二十五年天童景德禅寺重刊本",
+    original: "原神田鬯庵（喜一郎）等旧藏",
+    current: "大谷大学附属图书馆藏本",
+    full: `
+<div class="detail-section"><strong>类型：</strong>灯录</div>
+<div class="detail-section"><strong>名称：</strong>《景德传灯录》</div>
+<div class="detail-section"><strong>别称：</strong>《佛祖同参集》</div>
+<div class="detail-section"><strong>作者：</strong>道原</div>
+<div class="detail-section"><strong>成书年代：</strong>景德三年（1006年）</div>
+<div class="detail-section"><strong>传日日期：</strong>熙宁-元丰、淳祐</div>
+<hr style="margin:20px 0;border-top:1px solid #eee">
+<div class="detail-section">《景德传灯录》由北宋苏州承天寺僧人释道原编撰，为禅宗首部灯录体著作，经杨亿勘定、敕入大藏经。</div>
+<div class="detail-section" style="margin-top:16px">本条目版本为：元至正二十五年天童景德禅寺重刊本。</div>
+<div class="detail-section" style="margin-top:16px"><strong>一、史籍基本信息</strong></div>
+<div class="detail-section">《景德传灯录》由北宋苏州承天寺僧人释道原编撰，初名《佛祖同参集》，成书于宋真宗景德年间（1004—1007），为佛教禅宗首部以“灯录”命名的史传著作。道原编成后经杨亿等人勘定，宋真宗敕令编入大藏经流通。</div>
+<div class="detail-section" style="margin-top:16px"><strong>二、作者信息</strong></div>
+<div class="detail-section">道原，北宋法眼宗禅僧，属天台德韶法系。系天台韶国师之嗣，法眼清凉益之孙。</div>
+<div class="detail-section" style="margin-top:16px"><strong>三、成书年代</strong></div>
+<div class="detail-section">景德三年。据王随《传灯玉英集》后序记载，“文明武定章圣元孝皇帝在宥之九载，有江吴僧道源采七佛而下暨历世高贤尊宿言句，编成传灯录三十轴，诣阙进焉。寻诏名臣刊修臻毕，遂成钜典，模印颁行。”</div>
+<div class="detail-section" style="margin-top:16px"><strong>四、传日时间</strong></div>
+<div class="detail-section">无准确时间，据史料为：熙宁-元丰年间、淳祐年间。<br>据《参天台五台山记》记载，日本延历寺阿暗梨成寻于1072年入宋，携归经藏中有《景德传灯录》；1241年圣一国师圆尔辩圆自宋归，亦携归此籍。</div>
+`
+},
+
+{
+    name: "禅林僧宝传",
+    detail: "《禅林僧宝传》（残本）七卷",
+    author: "（宋）释惠洪撰",
+    version: "元刊本",
+    original: "原德富苏峰成篑堂等旧藏",
+    current: "御茶之水图书馆藏本",
+    full: "empty"
+},
+{
+    name: "历代释氏资鉴",
+    detail: "《歷代釋氏資鑒》十二卷",
+    author: "(元)释熙仲編",
+    version: "元后至元年间刊本",
+    original: "原三菱财团岩崎氏家旧藏",
+    current: "东洋文库藏本",
+    full: "empty"
+},
+{
+    name: "六学僧传",
+    detail: "(新修科分)《六學僧傅》三十卷",
+    author: "(元)释云噩撰",
+    version: "元至正二十六年胡氏刊本",
+    original: "原德富苏峰成篑堂等旧藏",
+    current: "御茶之水图书馆藏本",
+    full: "empty"
+},
+{
+    name: "宗门统要",
+    detail: "(續集)《宗門統要》十二卷",
+    author: "(元)释清茂撰",
+    version: "明刊本共十册",
+    original: "原江户时代林罗山旧藏",
+    current: "内阁文库藏本",
+    full: "empty"
+},
+{
+    name: "五灯会元",
+    detail: "《五灯会元》二十卷",
+    author: "（宋）释普济撰",
+    version: "明嘉靖年间刊本",
+    original: "原狩野氏旧藏",
+    current: "东北大学附属图书馆藏本",
+    full: "empty"
+},
+
+// ======================
+// 景德传灯录 3
+// ======================
+{
+    name: "景德传灯录",
+    detail: "《景德传灯录》三十卷",
+    author: "（宋）释道原辑",
+    version: "明万历三十四年贺学礼刊本",
+    original: "原枫山官库等旧藏",
+    current: "内阁文库藏本",
+    full: `
+<div class="detail-section"><strong>类型：</strong>灯录</div>
+<div class="detail-section"><strong>名称：</strong>《景德传灯录》</div>
+<div class="detail-section"><strong>别称：</strong>《佛祖同参集》</div>
+<div class="detail-section"><strong>作者：</strong>道原</div>
+<div class="detail-section"><strong>成书年代：</strong>景德三年（1006年）</div>
+<hr style="margin:20px 0;border-top:1px solid #eee">
+<div class="detail-section">本条目版本为：明万历三十四年贺学礼刊本。</div>
+<div class="detail-section" style="margin-top:16px">《景德传灯录》为禅宗第一部灯录，记载禅宗世系与机缘语句，是研究宋代禅宗最核心文献之一。</div>
+<div class="detail-section" style="margin-top:16px"><strong>一、史籍基本信息</strong></div>
+<div class="detail-section">《景德传灯录》由北宋苏州承天寺僧人释道原编撰，初名《佛祖同参集》，成书于宋真宗景德年间（1004—1007），为佛教禅宗首部以“灯录”命名的史传著作。道原编成后经杨亿等人勘定，宋真宗敕令编入大藏经流通。</div>
+<div class="detail-section" style="margin-top:16px"><strong>二、作者信息</strong></div>
+<div class="detail-section">道原，北宋法眼宗禅僧，属天台德韶法系。系天台韶国师之嗣，法眼清凉益之孙。</div>
+<div class="detail-section" style="margin-top:16px"><strong>三、成书年代</strong></div>
+<div class="detail-section">景德三年。据王随《传灯玉英集》后序记载，“文明武定章圣元孝皇帝在宥之九载，有江吴僧道源采七佛而下暨历世高贤尊宿言句，编成传灯录三十轴，诣阙进焉。寻诏名臣刊修臻毕，遂成钜典，模印颁行。”</div>
+<div class="detail-section" style="margin-top:16px"><strong>四、传日时间</strong></div>
+<div class="detail-section">无准确时间，据史料为：熙宁-元丰年间、淳祐年间。<br>据《参天台五台山记》记载，日本延历寺阿暗梨成寻于1072年入宋，携归经藏中有《景德传灯录》；1241年圣一国师圆尔辩圆自宋归，亦携归此籍。</div>
+`
+}
+];
+
+function render(list) {
+    const box = document.getElementById('list');
+    box.innerHTML = list.map((b,i) => `
+    <div class="book-item" onclick="openDetail(${i})">
+        <div class="book-title">${b.name}</div>
+        <div class="book-info">${b.author}｜${b.version}</div>
+    </div>
+    `).join('');
+}
+
+function search() {
+    const kw = document.getElementById('search').value.toLowerCase();
+    const res = books.filter(b => 
+        b.name.toLowerCase().includes(kw) || 
+        b.author.toLowerCase().includes(kw) || 
+        b.version.toLowerCase().includes(kw) ||
+        b.original.toLowerCase().includes(kw) || 
+        b.current.toLowerCase().includes(kw)
+    );
+    render(res);
+}
+
+function openDetail(index) {
+    const b = books[index];
+    if (b.full === "empty") {
+        document.getElementById('detail').innerHTML = `
+            <div class="detail-title">${b.name}</div>
+            <div class="empty-tip">正在更新中……请稍候访问</div>
+        `;
+    } else {
+        document.getElementById('detail').innerHTML = `
+            <div class="detail-title">${b.name}</div>
+            ${b.full}
+        `;
+    }
+    document.getElementById('modal').style.display = "flex";
+}
+
+function closeModal() {
+    document.getElementById('modal').style.display = "none";
+}
+
+render(books);
+</script>
+</body>
+</html>
